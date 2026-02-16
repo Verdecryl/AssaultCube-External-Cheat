@@ -2,12 +2,18 @@
 #include <thread>
 #include <Windows.h>
 #include <iostream>
+#include <cmath>
 
 namespace offsets
 {
 	constexpr auto PlayerCount = 0x0018AC0C;
 	constexpr auto localPlayer = 0x0018AC00;
 	constexpr auto EntityList = 0x0018AC04;
+
+	constexpr auto ViewMatrix = 0x17DFD0;
+
+	constexpr auto ReloadTime = 0x164;
+	constexpr auto SingleOrAuto = 0x204;
 	
 	constexpr auto PPosX = 0x28;
 	constexpr auto PPosY = 0x2c;
@@ -80,6 +86,24 @@ bool RapidFire = false;
 
 int WSpeed = 5;
 
+struct Vector3 {
+	float x, y, z;
+};
+
+float GetDistance(Vector3 src, Vector3 dst) {
+	return sqrtf(powf(dst.x - src.x, 2) + powf(dst.y - src.y, 2) + powf(dst.z - src.z, 2));
+}
+
+void CalcAngle(Vector3 src, Vector3 dst, float& yaw, float& pitch) {
+	float dx = dst.x - src.x;
+	float dy = dst.y - src.y;
+	float dz = dst.z - src.z;
+	float dist = GetDistance(src, dst);
+
+	yaw = atan2f(dy, dx) * (180.0f / 3.14159265358979323846f) + 90.0f;
+	pitch = asinf(dz / dist) * (180.0f / 3.14159265358979323846f);
+}
+
 
 
 int main() 
@@ -104,6 +128,7 @@ int main()
 	std::cout << "F2 -> Infinite Health" << std::endl;
 	std::cout << "F3 -> Infinite Ammo" << std::endl;
 	std::cout << "F4 -> Rapid Fire" << std::endl;
+	std::cout << "F7 -> Aimbot" << std::endl;
 
 
 
@@ -151,6 +176,14 @@ int main()
 			Sleep(200);
 		}
 
+		//F7 Toggle Aimbot
+
+		if (GetAsyncKeyState(VK_F7) & 0x8000)
+		{
+			Aimbot = !Aimbot;
+			std::cout << "Aimbot: " << (Aimbot ? "ON" : "OFF") << std::endl;
+			Sleep(200);
+		}
 
 
 		// ============== Feature Implementation ================
@@ -225,6 +258,73 @@ int main()
 		if (RapidFire) 
 		{
 			mem.Write<BYTE>(localPlayer + offsets::AssaultRifleWaitTime, 0);
+		}
+
+		//Aimbot
+		if (Aimbot) {
+
+
+			
+			float MAX_FOV = 20.0f; 
+
+			if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
+
+				float bestFov = MAX_FOV;
+				Vector3 targetPos = { 0, 0, 0 };
+				bool foundTarget = false;
+
+				
+				Vector3 myPos = {
+					mem.Read<float>(localPlayer + offsets::PPosX),
+					mem.Read<float>(localPlayer + offsets::PPosY),
+					mem.Read<float>(localPlayer + offsets::PPosZ)
+				};
+
+				float currentYaw = mem.Read<float>(localPlayer + offsets::PovX);
+				float currentPitch = mem.Read<float>(localPlayer + offsets::PovY);
+
+				for (int i = 1; i < playercount; i++) {
+					uintptr_t entity = mem.Read<uintptr_t>(PlayerList + (i * 0x4));
+					if (!entity) continue;
+
+					int health = mem.Read<int>(entity + offsets::health);
+					if (health <= 0 || health > 100) continue;
+
+					Vector3 entPos = {
+						mem.Read<float>(entity + offsets::PPosX),
+						mem.Read<float>(entity + offsets::PPosY),
+						mem.Read<float>(entity + offsets::PPosZ)
+					};
+
+					
+					float angleYaw, anglePitch;
+					CalcAngle(myPos, entPos, angleYaw, anglePitch);
+
+					
+					float yawDiff = abs(angleYaw - currentYaw);
+					float pitchDiff = abs(anglePitch - currentPitch);
+
+					
+					if (yawDiff > 180) yawDiff = 360 - yawDiff;
+
+					float fovDistance = sqrtf(powf(yawDiff, 2) + powf(pitchDiff, 2));
+
+					
+					if (fovDistance < bestFov) {
+						bestFov = fovDistance;
+						targetPos = entPos;
+						foundTarget = true;
+					}
+				}
+
+				if (foundTarget) {
+					float finalYaw, finalPitch;
+					CalcAngle(myPos, targetPos, finalYaw, finalPitch);
+
+					mem.Write<float>(localPlayer + offsets::PovX, finalYaw);
+					mem.Write<float>(localPlayer + offsets::PovY, finalPitch);
+				}
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
