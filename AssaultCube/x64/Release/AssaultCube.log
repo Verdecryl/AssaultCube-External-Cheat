@@ -1,0 +1,18 @@
+﻿  main.cpp
+  memory.cpp
+D:\Projects\AssaultCube\cheat\memory.cpp(13,8): error C2664: 'int strcmp(const char *,const char *)': cannot convert argument 2 from 'WCHAR [260]' to 'const char *'
+      D:\Projects\AssaultCube\cheat\memory.cpp(13,33):
+      Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+      D:\Windows Kits\10\Include\10.0.26100.0\ucrt\string.h(100,13):
+      see declaration of 'strcmp'
+      D:\Projects\AssaultCube\cheat\memory.cpp(13,8):
+      while trying to match the argument list '(const char *, WCHAR [260])'
+  
+D:\Projects\AssaultCube\cheat\memory.cpp(53,8): error C2664: 'int strcmp(const char *,const char *)': cannot convert argument 2 from 'WCHAR [256]' to 'const char *'
+      D:\Projects\AssaultCube\cheat\memory.cpp(53,32):
+      Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+      D:\Windows Kits\10\Include\10.0.26100.0\ucrt\string.h(100,13):
+      see declaration of 'strcmp'
+      D:\Projects\AssaultCube\cheat\memory.cpp(53,8):
+      while trying to match the argument list '(const char *, WCHAR [256])'
+  
